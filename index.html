@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Онлайн система проверки задач</title>
+    <style>
+        /* Баннер растянутый на всю ширину */
+        .full-width-banner {
+            width: 100vw; /* 100% ширины viewport */
+            height: auto; /* Высота автоматически */
+            display: block;
+            /*max-height: 400px; /* Ограничиваем максимальную высоту */
+            object-fit: cover; /* Заполняем область */
+        }
+        
+        /* Важная правка: убираем отступы у body */
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; /* Убираем margin */
+            padding: 0; /* Убираем padding */
+        }
+        
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        
+        /* Остальные ваши стили */
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        select, button, textarea { margin: 5px; padding: 8px; }
+        button {
+            background: #FD490C;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 15px; /* ← сильно закругленные углы */
+        }
+        button:hover { background: #BF2C0B; }
+        .code-editor { width: 100%; height: 300px; font-family: monospace; }
+        .result { background: #f5f5f5; padding: 10px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <!-- Картинка растянутая на всю ширину экрана -->
+    <img src="/Users/asddqk/Desktop/kurs_oop_web/welcome.png" 
+         alt="Баннер системы"
+         class="full-width-banner">
+    <div class="container">
+        
+        <div class="section">
+            <h3>1. Выберите тему:</h3>
+            <select id="topicSelect">
+                <option value="">Загрузка...</option>
+            </select>
+            <button onclick="loadTopics()">Обновить темы</button>
+        </div>
+
+        <div class="section">
+            <h3>2. Выберите задачу:</h3>
+            <select id="problemSelect">
+                <option value="">Сначала выберите тему</option>
+            </select>
+            <button onclick="loadProblem()">Показать условие</button>
+        </div>
+
+        <div class="section">
+            <h3>3. Условие задачи:</h3>
+            <div id="problemInfo" class="result">Выберите задачу...</div>
+        </div>
+
+        <div class="section">
+            
+            <h3>4. Ваше решение (Java):</h3>
+            <textarea id="codeEditor" class="code-editor" placeholder="Введите ваш код Java здесь...">
+            import java.io.*;
+            import java.util.*;
+
+            public class Main {
+                public static void main(String[] args) throws IOException {
+                    // Чтение из файла INPUT.TXT
+                    BufferedReader reader = new BufferedReader(new FileReader("INPUT.TXT"));
+                    String line = reader.readLine();
+                    reader.close();
+                    
+                    // Ваш код здесь
+                    String[] parts = line.split(" ");
+                    long a = Long.parseLong(parts[0]);
+                    long b = Long.parseLong(parts[1]);
+                    long sum = a + b;
+                    
+                    // Запись в файл OUTPUT.TXT
+                    BufferedWriter writer = new BufferedWriter(new FileWriter("OUTPUT.TXT"));
+                    writer.write(String.valueOf(sum));
+                    writer.newLine();
+                    writer.close();
+                }
+            }</textarea>
+        </div>
+
+        <div class="section">
+            <button onclick="submitSolution()" style="padding: 10px 20px; font-size: 16px;">
+                 Проверить решение
+            </button>
+        </div>
+
+        <div class="section">
+            <h3>5. Результат проверки:</h3>
+            <div id="judgeResult" class="result">Здесь появится результат проверки...</div>
+        </div>
+ 
+        <div class="section">
+            <button onclick="showSolution()" style="background: #28a745;">
+                Показать эталонное решение (Python)
+            </button>
+            <div id="solutionArea" class="result" style="display: none;">
+                Здесь появится эталонное решение...
+            </div>  
+        </div>
+    </div>
+
+    <script>
+        async function loadTopics() {
+            try {
+                const response = await fetch('http://localhost:8080/topics');
+                const data = await response.json();
+                
+                const select = document.getElementById('topicSelect');
+                select.innerHTML = '<option value="">Выберите тему</option>';
+                
+                data.topics.forEach(topic => {
+                    const option = document.createElement('option');
+                    option.value = topic;
+                    option.textContent = topic;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                alert('Ошибка загрузки тем: ' + error.message);
+            }
+        }
+
+        async function loadProblems() {
+            const topic = document.getElementById('topicSelect').value;
+            if (!topic) return;
+
+            try {
+                const response = await fetch(`http://localhost:8080/problems/${encodeURIComponent(topic)}`);
+                const data = await response.json();
+                
+                const select = document.getElementById('problemSelect');
+                select.innerHTML = '<option value="">Выберите задачу</option>';
+                
+                // Парсим список задач
+                const problems = data.problems.split('\n').filter(p => p.trim());
+                problems.forEach(problem => {
+                    const match = problem.match(/^(\d+) -/);
+                    if (match) {
+                        const option = document.createElement('option');
+                        option.value = match[1];
+                        option.textContent = problem;
+                        select.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                alert('Ошибка загрузки задач: ' + error.message);
+            }
+        }
+
+        async function loadProblem() {
+            const problemId = document.getElementById('problemSelect').value;
+            if (!problemId) return;
+
+            try {
+                const response = await fetch(`http://localhost:8080/problem/${problemId}`);
+                const data = await response.json();
+                document.getElementById('problemInfo').textContent = data.problem;
+            } catch (error) {
+                alert('Ошибка загрузки условия: ' + error.message);
+            }
+        }
+
+        async function submitSolution() {
+            const problemId = document.getElementById('problemSelect').value;
+            const code = document.getElementById('codeEditor').value;
+
+            if (!problemId || !code) {
+                alert('Выберите задачу и введите код!');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/judge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ problemId, code })
+                });
+
+                const data = await response.json();
+                document.getElementById('judgeResult').textContent = data.result;
+            } catch (error) {
+                document.getElementById('judgeResult').textContent = 'Ошибка: ' + error.message;
+            }
+        }
+
+        async function showSolution() {
+    const problemId = document.getElementById('problemSelect').value;
+    if (!problemId) {
+        alert('Выберите задачу!');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`http://localhost:8080/solution/${problemId}`);
+        const data = await response.json();
+        
+        const solutionArea = document.getElementById('solutionArea');
+        solutionArea.style.display = 'block';
+        solutionArea.textContent = data.solution;
+    } catch (error) {
+        document.getElementById('solutionArea').textContent = 
+            'Решение не найдено для этой задачи.';
+    }
+}
+
+        // Инициализация
+        document.getElementById('topicSelect').addEventListener('change', loadProblems);
+        loadTopics();
+    </script>
+</body>
+</html>
