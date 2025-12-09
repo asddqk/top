@@ -1,0 +1,58 @@
+import java.util.*;
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        Scanner scanner = new Scanner(new File("input.txt"));
+        PrintWriter writer = new PrintWriter(new File("output.txt"));
+        
+        int n = scanner.nextInt();
+        int m = scanner.nextInt();
+        scanner.nextLine();
+        
+        // Читаем заставку
+        char[][] ad = new char[n][m];
+        for (int i = 0; i < n; i++) {
+            ad[i] = scanner.nextLine().toCharArray();
+        }
+        
+        // Читаем возможности табло
+        int[][] board = new int[n][m];
+        for (int i = 0; i < n; i++) {
+            String line = scanner.nextLine().replaceAll(" ", "");
+            for (int j = 0; j < m; j++) {
+                board[i][j] = line.charAt(j) - '0';
+            }
+        }
+        
+        // Множества возможностей для каждого цвета
+        Set<Integer> redSet = Set.of(4, 5, 6, 7);
+        Set<Integer> greenSet = Set.of(2, 3, 6, 7);
+        Set<Integer> blueSet = Set.of(1, 3, 5, 7);
+        
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                char ch = ad[i][j];
+                int cap = board[i][j];
+                
+                if (ch == 'R' && !redSet.contains(cap)) {
+                    writer.println("NO");
+                    writer.close();
+                    return;
+                } else if (ch == 'G' && !greenSet.contains(cap)) {
+                    writer.println("NO");
+                    writer.close();
+                    return;
+                } else if (ch == 'B' && !blueSet.contains(cap)) {
+                    writer.println("NO");
+                    writer.close();
+                    return;
+                }
+            }
+        }
+        
+        writer.println("YES");
+        scanner.close();
+        writer.close();
+    }
+}
